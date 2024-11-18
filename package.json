@@ -1,0 +1,10 @@
+{
+  "name": "vk-api-lab5",
+  "version": "1.0.0",
+  "dependencies": {
+    "three": "^0.128.0"
+  },
+  "scripts": {
+    "start": "live-server src"
+  }
+}

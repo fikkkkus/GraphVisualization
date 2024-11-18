@@ -35,34 +35,67 @@ class Neo4jDatabase:
         self.driver.close()
 
     def get_all_nodes(self):
-        with self.driver.session(database=self.database) as session:
-            result = session.run("MATCH (n) RETURN n.id AS id, labels(n) AS label")
-            return [{"id": record["id"], "label": record["label"]} for record in result]
-
-    def get_node_with_relations(self, node_id):
         try:
             with self.driver.session(database=self.database) as session:
                 query = """
-                    MATCH (n {id: $node_id})-[r]-(m)
-                     RETURN n, m, r, type(r) AS relation_type
-                """.replace("$node_id", str(node_id))
+                        MATCH (n)-[r]-(m)
+                        RETURN 
+                            n AS node, 
+                            labels(n) AS node_labels, 
+                            m AS related_node, 
+                            labels(m) AS related_node_labels, 
+                            type(r) AS relation_type,
+                            CASE 
+                                WHEN id(n) = id(startNode(r)) THEN 'out'
+                                WHEN id(m) = id(startNode(r)) THEN 'in'
+                                ELSE 'unknown'
+                            END AS relation_direction
+                """
+                result = session.run(query)
+
+                return [
+                    {
+                        "node": {**dict(record["node"]), "labels": record["node_labels"]},
+                        "relation_type": f"{record['relation_type']} ({record['relation_direction']})",
+                        "related_node": {**dict(record["related_node"]), "labels": record["related_node_labels"]}
+                    }
+                    for record in result
+                ]
+        except Exception as e:
+            logger.debug(f"An error occurred while retrieving all nodes: {e}", exc_info=True)
+
+    def get_nodes_by_id(self, node_id):
+        try:
+            with self.driver.session(database=self.database) as session:
+                query = """
+                    MATCH (n)-[r]-(m)
+                    WHERE n.id = $node_id OR m.id = $node_id
+                    RETURN 
+                            n AS node, 
+                            labels(n) AS node_labels, 
+                            m AS related_node, 
+                            labels(m) AS related_node_labels, 
+                            type(r) AS relation_type,
+                            CASE 
+                                WHEN id(n) = id(startNode(r)) THEN 'out'
+                                WHEN id(m) = id(startNode(r)) THEN 'in'
+                                ELSE 'unknown'
+                            END AS relation_direction
+                """.replace("$node_id", node_id)
 
                 result = session.run(query)
 
                 return [
                     {
-                        "node": dict(record["n"].items()),
-                        "relation_type": (
-                            f"node {record['relation_type']} related_node"
-                            if str(record['r'].start_node['id']) == str(node_id)
-                            else f"related_node {record['relation_type']} node"
-                        ),
-                        "related_node": dict(record["m"].items())  # Атрибуты связанного узла
+                        "node": {**dict(record["node"]), "labels": record["node_labels"]},
+                        "relation_type": f"{record['relation_type']} ({record['relation_direction']})",
+                        "related_node": {**dict(record["related_node"]), "labels": record["related_node_labels"]}
                     }
                     for record in result
                 ]
+
         except Exception as e:
-            logger.debug(f"An error occurred while retrieving node {node_id}: {e}", exc_info=True)
+            logger.debug(f"An error occurred while retrieving nodes by ID: {e}", exc_info=True)
 
     # Функция для добавления сегмента графа
     def add_graph_segment(self, segment: GraphSegment):
