@@ -4,4 +4,4 @@ app/node_modules/
 # Игнорировать виртуальное окружение
 venv/
 
-.idea
+.idea/
