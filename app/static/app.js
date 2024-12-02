@@ -1,5 +1,5 @@
 import * as THREE from "../static/node_modules/three/build/three.module.js";
-import { OrbitControls } from "../static/node_modules/three/examples/jsm/controls/OrbitControls.js";
+import { OrbitControls } from "./OrbitControls.js";
 
 let scene, camera, renderer, controls, raycaster, mouse, nodeObjectsNew = {}, edgesNew = [], lastClickedNode = null;
 let lastRequest = null, lastResultRequest = null;
